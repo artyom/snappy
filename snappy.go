@@ -36,17 +36,18 @@ func compress(fromName, toName string) error {
 	var src io.ReadCloser = os.Stdin
 	var err error
 	if fromName != "" {
-		src, err = os.Open(fromName)
+		if src, err = os.Open(fromName); err != nil {
+			return err
+		}
+		defer src.Close()
 	}
-	if err != nil {
-		return err
-	}
-	defer src.Close()
 
 	if toName != "" {
-		dst, err = os.Create(toName)
+		if dst, err = os.Create(toName); err != nil {
+			return err
+		}
+		defer dst.Close()
 	}
-	defer dst.Close()
 	w := snappy.NewBufferedWriter(dst)
 	if _, err = io.Copy(w, src); err != nil {
 		return err
