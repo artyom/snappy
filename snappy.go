@@ -3,9 +3,8 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/artyom/autoflags"
@@ -18,16 +17,14 @@ func main() {
 		To     string `flag:"o,output file"`
 		Unpack bool   `flag:"d,decompress"`
 	}{}
-	autoflags.Define(&p)
-	flag.Parse()
+	autoflags.Parse(&p)
+	var fn func(string, string) error = compress
 	if p.Unpack {
-		if err := decompress(p.From, p.To); err != nil {
-			log.Fatal(err)
-		}
-		return
+		fn = decompress
 	}
-	if err := compress(p.From, p.To); err != nil {
-		log.Fatal(err)
+	if err := fn(p.From, p.To); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
@@ -79,5 +76,3 @@ func decompress(fromName, toName string) error {
 	}
 	return dst.Close()
 }
-
-func init() { log.SetFlags(0) }
