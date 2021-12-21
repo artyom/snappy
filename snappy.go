@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -29,8 +30,8 @@ func main() {
 }
 
 func compress(fromName, toName string) error {
-	var dst io.WriteCloser = os.Stdout
-	var src io.ReadCloser = os.Stdin
+	var dst *os.File = os.Stdout
+	var src *os.File = os.Stdin
 	var err error
 	if fromName != "" {
 		if src, err = os.Open(fromName); err != nil {
@@ -45,33 +46,42 @@ func compress(fromName, toName string) error {
 		}
 		defer dst.Close()
 	}
-	w := snappy.NewBufferedWriter(dst)
-	if _, err = io.Copy(w, src); err != nil {
+	bw := bufio.NewWriterSize(dst, 4<<20)
+	w := snappy.NewBufferedWriter(bw)
+	if _, err = io.Copy(w, bufio.NewReaderSize(src, 4<<20)); err != nil {
 		return err
 	}
 	if err = w.Close(); err != nil {
+		return err
+	}
+	if err = bw.Flush(); err != nil {
 		return err
 	}
 	return dst.Close()
 }
 
 func decompress(fromName, toName string) error {
-	var dst io.WriteCloser = os.Stdout
-	var src io.ReadCloser = os.Stdin
+	var dst *os.File = os.Stdout
+	var src *os.File = os.Stdin
 	var err error
 	if fromName != "" {
-		src, err = os.Open(fromName)
+		if src, err = os.Open(fromName); err != nil {
+			return err
+		}
+		defer src.Close()
 	}
-	if err != nil {
-		return err
-	}
-	defer src.Close()
 
 	if toName != "" {
-		dst, err = os.Create(toName)
+		if dst, err = os.Create(toName); err != nil {
+			return err
+		}
+		defer dst.Close()
 	}
-	defer dst.Close()
-	if _, err = io.Copy(dst, snappy.NewReader(src)); err != nil {
+	bw := bufio.NewWriterSize(dst, 4<<20)
+	if _, err = io.Copy(bw, snappy.NewReader(bufio.NewReaderSize(src, 4<<20))); err != nil {
+		return err
+	}
+	if err := bw.Flush(); err != nil {
 		return err
 	}
 	return dst.Close()
