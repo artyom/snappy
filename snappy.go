@@ -4,26 +4,29 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/artyom/autoflags"
 	"github.com/golang/snappy"
 )
 
 func main() {
-	p := struct {
-		From   string `flag:"f,input file"`
-		To     string `flag:"o,output file"`
-		Unpack bool   `flag:"d,decompress"`
+	args := struct {
+		From   string
+		To     string
+		Unpack bool
 	}{}
-	autoflags.Parse(&p)
+	flag.BoolVar(&args.Unpack, "d", args.Unpack, "decompress")
+	flag.StringVar(&args.From, "f", args.From, "input file")
+	flag.StringVar(&args.To, "o", args.To, "output file")
+	flag.Parse()
 	var fn func(string, string) error = compress
-	if p.Unpack {
+	if args.Unpack {
 		fn = decompress
 	}
-	if err := fn(p.From, p.To); err != nil {
+	if err := fn(args.From, args.To); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
